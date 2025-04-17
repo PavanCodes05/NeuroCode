@@ -9,9 +9,24 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": ["onStartupFinished"],
   "main": "./out/extension.js",
-  "contributes": {},
+  "contributes": {
+    "commands": [
+      {
+        "command": "neurocode.explain",
+        "title": "Explain Code"
+      },
+      {
+        "command": "neurocode.refactor",
+        "title": "Refactor Code"
+      },
+      {
+        "command": "neurocode.generateDoc",
+        "title": "Generate Doc"
+      }
+    ]
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
