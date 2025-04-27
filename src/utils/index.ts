@@ -1,3 +1,7 @@
-import { identifyLanguage } from './fileLanguageUtils.js';
+// Common
+import { identifyLanguage } from './common/fileLanguageUtils';
 
-export { identifyLanguage };
+// Python
+import { handlePythonParsing } from './python/handlePythonParsing';
+
+export { identifyLanguage, handlePythonParsing };

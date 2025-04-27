@@ -1,48 +1,51 @@
+import path, { resolve } from 'path';
 import { spawn } from 'child_process';
-import path from 'path';
+import * as vscode from 'vscode';
 
-function pythonParser(context: string, code: string): Promise<any> {
-    const pythonScriptPath = path.join(context, "src", "parsers", "pythonParser.py");
+function codeParser(language: string, context: vscode.ExtensionContext, code: string): Promise<any> {
+    let parserCommand: string;
+    let parserFile: string;
 
-    const pyProcess = spawn('python3', [pythonScriptPath]);
-    try {
-        let output = '';
-        let error = '';
+    switch(language) {
+        case "python":
+            parserFile = path.join(context.extensionPath, "src", "parsers", "python", "pythonParser.py");
+            parserCommand = `python3 ${parserFile}`;            
+            break;
+        default:
+            vscode.window.showInformationMessage("Unsupported Language");
+            return Promise.resolve(null);
+    };
 
-        return new Promise((resolve, reject) => {
-            // Listen for stdout data
-            pyProcess.stdout.on('data', (chunk) => {
-                output += chunk.toString();
-            });
-
-            // Listen for stderr data
-            pyProcess.stderr.on('data', (chunk) => {
-                error += chunk.toString();
-            });
-
-            // When the Python process ends
-            pyProcess.on('close', (code) => {
-                // Handle errors from Python process
-                if (code !== 0 || error) {
-                    return reject(new Error(`Python error: ${error}`));
-                }
-                try {
-                    // Try to parse the output as JSON
-                    const result = JSON.parse(output);
-                    resolve(result);  // Return the parsed result
-                } catch (e) {
-                    reject(new Error('Failed to parse Python output as JSON.'));
-                }
-            });
-
-            // Send the input to the Python process
-            pyProcess.stdin.write(code);
-            pyProcess.stdin.end();  // Signal that input is finished
+    return new Promise((resolve, reject) => {
+        const child = spawn(parserCommand, [], {shell: true});
+        
+        let output = "";
+        let error = "";
+        
+        child.stdout.on('data', (data) => {
+            output += data.toString();
         });
-    } catch (error) {
-        // Catch any error in the above process
-        throw new Error(`Error occurred while calling Python parser: ${error}`);
-    }
+
+        child.stderr.on('data', (data) => {
+            error += data.toString();
+        });
+
+        child.on('close', (code) => {
+            if (code !== 0) {
+                reject(error || "Parser Error");
+            } else {
+                try {
+                    const parsed = JSON.parse(output);
+                    resolve(parsed);
+                } catch (e) {
+                    reject("Failed to parse output");
+                }
+            }
+        });
+
+        child.stdin.write(code);
+        child.stdin.end();
+    });
 };
 
-export { pythonParser };
+export { codeParser };
