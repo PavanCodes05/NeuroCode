@@ -5,14 +5,24 @@ import { identifyLanguage, handlePythonParsing } from './utils/index.js';
 export async function activate(context: vscode.ExtensionContext) {
 	console.log("NeuroCode is Activated");
 
+	// Explain Code Command
 	const explain = vscode.commands.registerCommand('neurocode.explain', async() => {
 		let structuredCode: string = "";
 
 		const lang = identifyLanguage();
 
 		const editor = vscode.window.activeTextEditor;
-		const code = editor?.document.getText() ?? "";
+		if (!editor) {
+			vscode.window.showErrorMessage("No Active Editor!");
+			return;
+		}
 
+		const code = editor?.document.getText(editor.selection);
+		if(!code) {
+			vscode.window.showErrorMessage("No Code Selected!");
+			return;
+		}
+		
 		switch (lang) {
 			case "Python":
 				structuredCode = await handlePythonParsing(context, code);
@@ -24,14 +34,60 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage("Explain Code Snippet");
 	});
 
-	const refactor = vscode.commands.registerCommand('neurocode.refactor', () => {
+	// Refactor Code Command
+	const refactor = vscode.commands.registerCommand('neurocode.refactor', async() => {
+		let structuredCode: string = "";
+
 		const lang = identifyLanguage();
+
+		const editor = vscode.window.activeTextEditor;
+		if(!editor) {
+			vscode.window.showErrorMessage("No Active Editor!");
+			return;
+		}
+		
+		const code = editor?.document.getText(editor.selection);
+		if(!code) {
+			vscode.window.showErrorMessage("No Code Selected!");
+			return;
+		}
+
+		switch(lang) {
+			case "Python":
+				structuredCode = await handlePythonParsing(context, code);
+				break;
+			default: 
+				vscode.window.showInformationMessage("Unsupported Language");
+		}
 
 		vscode.window.showInformationMessage("Refactor Code Snippet");
 	});
 
-	const generateDoc = vscode.commands.registerCommand('neurocode.generateDoc', () => {
+	// GenerateDoc Command
+	const generateDoc = vscode.commands.registerCommand('neurocode.generateDoc', async() => {
+		let structuredCode: string = "";
+
 		const lang = identifyLanguage();
+
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			vscode.window.showErrorMessage("No Active Editor!");
+			return;
+		}
+
+		const code = editor?.document.getText();
+		if (!code) {
+			vscode.window.showErrorMessage("Document is empty!");
+			return;
+		}
+
+		switch(lang) {
+			case "Python":
+				structuredCode = await handlePythonParsing(context, code);
+				break;
+			default:
+				vscode.window.showInformationMessage("Unsupported Language");
+		}
 
 		vscode.window.showInformationMessage("Generate Doc");
 	});
