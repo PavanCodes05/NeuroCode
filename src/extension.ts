@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 import { identifyLanguage, handlePythonParsing } from './utils/index.js';
+import { getContext } from './context-analysis/index.js';
+import { structurePrompt, callLLM } from './llm-integration/index.js';
 
 dotenv.config({path: path.resolve(__dirname, '..', '.env')});
 
@@ -12,8 +14,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Explain Code Command
 	const explain = vscode.commands.registerCommand('neurocode.explain', async() => {
-		let structuredCode: string = "";
-
 		const lang = identifyLanguage();
 
 		const editor = vscode.window.activeTextEditor;
@@ -30,7 +30,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		
 		switch (lang) {
 			case "Python":
-				structuredCode = await handlePythonParsing(context, code);
+				const structuredCode = await handlePythonParsing(context, code);
+				const projectContext = await getContext();
+				const prompt = structurePrompt("explain", lang, structuredCode, projectContext);
+				
+				const response = await callLLM(prompt);
+				console.log(response);
 				break;
 			default:
 				vscode.window.showInformationMessage("Unsupported Language");
