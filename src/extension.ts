@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 
+import dotenv from 'dotenv';
+import path from 'path';
+
 import { identifyLanguage, handlePythonParsing } from './utils/index.js';
+
+dotenv.config({path: path.resolve(__dirname, '..', '.env')});
 
 export async function activate(context: vscode.ExtensionContext) {
 	console.log("NeuroCode is Activated");
@@ -66,7 +71,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	// GenerateDoc Command
 	const generateDoc = vscode.commands.registerCommand('neurocode.generateDoc', async() => {
 		let structuredCode: string = "";
-
 		const lang = identifyLanguage();
 
 		const editor = vscode.window.activeTextEditor;
