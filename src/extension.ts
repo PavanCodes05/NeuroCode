@@ -16,6 +16,18 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Explain Code Command
 	const explain = vscode.commands.registerCommand('neurocode.explain', async() => {
 		const lang = identifyLanguage();
+		
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			vscode.window.showErrorMessage("No Active Editor!");
+			return;
+		}
+		
+		const code = editor?.document.getText(editor.selection);
+		if(!code) {
+			vscode.window.showErrorMessage("No Code Selected!");
+			return;
+		}
 
 		const panel = vscode.window.createWebviewPanel(
 			"Explain Code - NeuroCode",
@@ -25,18 +37,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		);
 
 		panel.webview.html = getWebviewContent();
-
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) {
-			vscode.window.showErrorMessage("No Active Editor!");
-			return;
-		}
-
-		const code = editor?.document.getText(editor.selection);
-		if(!code) {
-			vscode.window.showErrorMessage("No Code Selected!");
-			return;
-		}
 		
 		switch (lang) {
 			case "Python":
