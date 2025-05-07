@@ -6,6 +6,7 @@ import path from 'path';
 import { identifyLanguage, handlePythonParsing } from './utils/index.js';
 import { getContext } from './context-analysis/index.js';
 import { structurePrompt, callLLM } from './llm-integration/index.js';
+import { getWebviewContent } from './views/webView.js';
 
 dotenv.config({path: path.resolve(__dirname, '..', '.env')});
 
@@ -15,6 +16,15 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Explain Code Command
 	const explain = vscode.commands.registerCommand('neurocode.explain', async() => {
 		const lang = identifyLanguage();
+
+		const panel = vscode.window.createWebviewPanel(
+			"Explain Code - NeuroCode",
+			`Code Explanation`,
+			vscode.ViewColumn.One,
+			{ enableScripts: true , retainContextWhenHidden: true}
+		);
+
+		panel.webview.html = getWebviewContent();
 
 		const editor = vscode.window.activeTextEditor;
 		if (!editor) {
@@ -34,8 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				const projectContext = await getContext();
 				const prompt = structurePrompt("explain", lang, structuredCode, projectContext);
 				
-				const response = await callLLM(prompt);
-				console.log(response);
+				await callLLM(prompt, panel);
 				break;
 			default:
 				vscode.window.showInformationMessage("Unsupported Language");

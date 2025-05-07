@@ -1,11 +1,12 @@
+import * as vscode from 'vscode';
+
 import { runCohere } from "./cohere";
 import { structurePrompt } from "./structurePrompt";
 
-const callLLM = async(prompt: string) => {
+const callLLM = async(prompt: string, panel: vscode.WebviewPanel) => {
     try {
         // Cohere
-        const cohereResponse = runCohere(prompt);
-        return cohereResponse;
+        runCohere(prompt, panel);
     } catch (error) {
         throw error;
     }
