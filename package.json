@@ -27,8 +27,15 @@
         "command": "neurocode.generateDoc",
         "title": "Generate Doc"
       }
+    ],
+    "keybindings": [
+      {
+        "command": "neurocode.explain",
+        "key": "ctrl+shift+e",
+        "when": "editorTextFocus"
+      }
     ]
-  },
+   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
