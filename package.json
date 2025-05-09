@@ -20,6 +20,10 @@
         "title": "Explain Code"
       },
       {
+        "command": "neurocode.customPrompt",
+        "title": "Custom Prompt"
+      },
+      {
         "command": "neurocode.refactor",
         "title": "Refactor Code"
       },
@@ -32,6 +36,11 @@
       {
         "command": "neurocode.explain",
         "key": "ctrl+shift+e",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "neurocode.customPrompt",
+        "key": "ctrl+shift+x",
         "when": "editorTextFocus"
       }
     ]
