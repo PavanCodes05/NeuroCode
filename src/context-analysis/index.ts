@@ -5,13 +5,14 @@ import { getProjectStructure } from "./projectStructure";
 const getContext = async() => {
     const rootUri =  vscode.workspace.workspaceFolders?.[0].uri;
     if(!rootUri) {
-        return null;
+        return;
     }
 
     try {
         const projectStructure = await getProjectStructure(rootUri);
+        return projectStructure;
     } catch(error) {
-
+        throw error;
     };
 };
 
