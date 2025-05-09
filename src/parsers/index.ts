@@ -2,14 +2,14 @@ import path, { resolve } from 'path';
 import { spawn } from 'child_process';
 import * as vscode from 'vscode';
 
-function codeParser(language: string, context: vscode.ExtensionContext, code: string): Promise<any> {
+function codeParser(language: string, context: vscode.ExtensionContext, code: string, startLine: number=0): Promise<any> {
     let parserCommand: string;
     let parserFile: string;
 
     switch(language) {
         case "python":
             parserFile = path.join(context.extensionPath, "src", "parsers", "python", "pythonParser.py");
-            parserCommand = `python3 ${parserFile}`;            
+            parserCommand = `python3 ${parserFile} --line_offset ${startLine}`;           
             break;
         default:
             vscode.window.showInformationMessage("Unsupported Language");
