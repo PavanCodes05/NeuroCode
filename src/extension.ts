@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import dotenv from 'dotenv';
 import path from 'path';
 
-import { identifyLanguage, handlePythonParsing } from './utils/index.js';
+import { identifyLanguage, handlePythonParsing, applyChangesToEditor } from './utils/index.js';
 import { getContext } from './context-analysis/index.js';
 import { structurePrompt, callLLM } from './llm-integration/index.js';
 import { getWebviewContent } from './views/webView.js';
@@ -23,8 +23,9 @@ export async function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		
-		const code = editor?.document.getText(editor.selection);
-		if(!code) {
+		const selectedCode = editor?.document.getText(editor.selection);
+		const startline = editor.selection.start.line;
+		if(!selectedCode) {
 			vscode.window.showErrorMessage("No Code Selected!");
 			return;
 		}
@@ -40,11 +41,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		
 		switch (lang) {
 			case "Python":
-				const structuredCode = await handlePythonParsing(context, code);
+				const structuredCode = await handlePythonParsing(context, selectedCode, startline);
+				console.log(structuredCode);
 				const projectContext = await getContext();
 				const prompt = structurePrompt("explain", lang, structuredCode, projectContext);
 				
-				await callLLM(prompt, panel);
+				const response = await callLLM(prompt, panel);
 				break;
 			default:
 				vscode.window.showInformationMessage("Unsupported Language");
@@ -53,10 +55,64 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage("Explain Code Snippet");
 	});
 
+	//Custom Prompt Command
+	const customPrompt = vscode.commands.registerCommand('neurocode.customPrompt', async() => {
+		const lang = identifyLanguage();
+
+		const editor = vscode.window.activeTextEditor;
+		if(!editor) {
+			vscode.window.showErrorMessage("No Active Editor!");
+			return;
+		}
+
+		const position = editor.selection.active;
+		const currentLine = position.line;
+
+		const selectedCode = editor?.document.getText(editor.selection);
+		const startline = editor.selection.start.line;
+		const endline = editor.selection.end.line;
+
+		const userPrompt = await vscode.window.showInputBox({
+			prompt: "Give Custom Prompts - NeuroCode",
+			placeHolder: "Write some good code",	
+			ignoreFocusOut: true
+		});
+
+		if(!userPrompt) {
+			vscode.window.showWarningMessage("No Input Given By User!");
+			return;
+		}
+		  
+		switch (lang) {
+			case "Python":
+				const structuredCode = await handlePythonParsing(context, selectedCode, startline);
+				console.log(structuredCode);
+				const projectContext = await getContext();
+				const prompt = structurePrompt("customPrompt", lang, structuredCode ? structuredCode : undefined, projectContext, userPrompt);
+
+				vscode.window.showInformationMessage(`${structuredCode}`);
+				
+				const response = await callLLM(prompt);
+				if(!response) {
+					return;
+				}
+
+				console.log(response);
+
+				if (!structuredCode) {
+					applyChangesToEditor(editor,"insert", currentLine, response.endLine + 1 + currentLine, response.modifiedCode);
+					return;
+				}
+
+				applyChangesToEditor(editor, "replace", response.startLine, endline + 1, response.modifiedCode);
+				break;
+			default:
+				vscode.window.showInformationMessage("Unsupported Language");
+		}
+	}); 
+
 	// Refactor Code Command
 	const refactor = vscode.commands.registerCommand('neurocode.refactor', async() => {
-		let structuredCode: string = "";
-
 		const lang = identifyLanguage();
 
 		const editor = vscode.window.activeTextEditor;
@@ -73,7 +129,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		switch(lang) {
 			case "Python":
-				structuredCode = await handlePythonParsing(context, code);
+				const structuredCode = await handlePythonParsing(context, code);
 				break;
 			default: 
 				vscode.window.showInformationMessage("Unsupported Language");
@@ -84,7 +140,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// GenerateDoc Command
 	const generateDoc = vscode.commands.registerCommand('neurocode.generateDoc', async() => {
-		let structuredCode: string = "";
 		const lang = identifyLanguage();
 
 		const editor = vscode.window.activeTextEditor;
@@ -101,7 +156,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		switch(lang) {
 			case "Python":
-				structuredCode = await handlePythonParsing(context, code);
+				const structuredCode = await handlePythonParsing(context, code);
 				break;
 			default:
 				vscode.window.showInformationMessage("Unsupported Language");

@@ -1,17 +1,28 @@
 import { systemPrompts } from "./systemPrompt";
 
-const structurePrompt = (command: string, language: string, structuredCode: string, context: any) => {
+const structurePrompt = (command: string, language: string, structuredCode?: string, context?: any, userPrompt?: string) => {
     const SystemPrompt = systemPrompts(command);
 
-    const promptDesign = {
-        role: SystemPrompt,
-        language: language, 
-        structuredCode: structuredCode, 
-        context: context
-    };
-    const prompt = JSON.stringify(promptDesign, null, 2);
+    let parsedStructuredCode: any = undefined;
 
-    return prompt;
+    try {
+        parsedStructuredCode = structuredCode ? JSON.parse(structuredCode) : undefined;
+        console.log(parsedStructuredCode);
+    } catch (error) {
+        console.warn("Invalid structuredCode JSON:", error);   
+    }
+
+    const systemMessage = `System: ${SystemPrompt}`;
+    const userMessage = `User:\n${JSON.stringify({
+        language,
+        structuredCode: parsedStructuredCode,
+        context,
+        userPrompt
+    }, null, 2)}`;
+
+    const coherePrompt = `${systemMessage}\n\n${userMessage}`;
+    
+    return coherePrompt;
 };
 
 export { structurePrompt };
