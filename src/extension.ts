@@ -165,6 +165,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage("Generate Doc");
 	});
 
-	context.subscriptions.push(explain, refactor, generateDoc);
+	context.subscriptions.push(explain, refactor, customPrompt, generateDoc);
 };
 
