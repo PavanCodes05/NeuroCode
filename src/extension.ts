@@ -74,7 +74,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		const userPrompt = await vscode.window.showInputBox({
 			prompt: "Give Custom Prompts - NeuroCode",
-			placeHolder: "Write some good code",	
+			placeHolder: "Eg: Write a function that generates fibonacci series till n",	
 			ignoreFocusOut: true
 		});
 
@@ -86,18 +86,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		switch (lang) {
 			case "Python":
 				const structuredCode = await handlePythonParsing(context, selectedCode, startline);
-				console.log(structuredCode);
 				const projectContext = await getContext();
 				const prompt = structurePrompt("customPrompt", lang, structuredCode ? structuredCode : undefined, projectContext, userPrompt);
 
-				vscode.window.showInformationMessage(`${structuredCode}`);
-				
 				const response = await callLLM(prompt);
 				if(!response) {
 					return;
 				}
-
-				console.log(response);
 
 				if (!structuredCode) {
 					applyChangesToEditor(editor,"insert", currentLine, response.endLine + 1 + currentLine, response.modifiedCode);
