@@ -128,6 +128,8 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 		
 		const code = editor?.document.getText(editor.selection);
+		const startLine = editor.selection.start.line;
+		const endLine = editor.selection.end.line;
 
 		if(!code) {
 			vscode.window.showErrorMessage("No Code Selected!");
@@ -137,6 +139,16 @@ export async function activate(context: vscode.ExtensionContext) {
 		switch(lang) {
 			case "Python":
 				const structuredCode = await handlePythonParsing(context, code);
+				const projectContext = await getContext();
+				const prompt = structurePrompt("refactor", lang, structuredCode ? structuredCode : undefined, projectContext);
+
+				const response = await callLLM(prompt);
+				if(!response) {
+					return;
+				}
+
+				applyChangesToEditor(editor, "replace", startLine, endLine + 1, response.modifiedCode);
+				break;
 			default: 
 				vscode.window.showInformationMessage("Unsupported Language");
 		}
