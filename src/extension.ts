@@ -65,13 +65,17 @@ export async function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		const position = editor.selection.active;
-		const currentLine = position.line;
-
+		const document = editor.document;
+		const documentLineCount = document.lineCount;
+		  
+		let startline = editor.selection.start.line;
+		let endline = editor.selection.end.line;
+		
 		const selectedCode = editor?.document.getText(editor.selection);
-		const startline = editor.selection.start.line;
-		const endline = editor.selection.end.line;
-
+		if (!selectedCode || selectedCode.trim() === "") {
+			startline = endline = editor.selection.active.line;
+		}
+		
 		const userPrompt = await vscode.window.showInputBox({
 			prompt: "Give Custom Prompts - NeuroCode",
 			placeHolder: "Eg: Write a function that generates fibonacci series till n",	
@@ -94,13 +98,20 @@ export async function activate(context: vscode.ExtensionContext) {
 					return;
 				}
 
+				if (documentLineCount === 0) {
+					applyChangesToEditor(editor, "insert", 0, 0, response.modifiedCode);
+					return;
+				  }
+
 				if (!structuredCode) {
-					applyChangesToEditor(editor,"insert", currentLine, response.endLine + 1 + currentLine, response.modifiedCode);
+					const insertLine = Math.min(startline, documentLineCount);
+					applyChangesToEditor(editor, "insert", insertLine, insertLine, response.modifiedCode);
 					return;
 				}
 
-				applyChangesToEditor(editor, "replace", response.startLine, endline + 1, response.modifiedCode);
-				break;
+				const safeEndLine = Math.min(endline + 1, documentLineCount);
+				applyChangesToEditor(editor, "replace", startline, safeEndLine, response.modifiedCode);
+				return;
 			default:
 				vscode.window.showInformationMessage("Unsupported Language");
 		}
@@ -117,6 +128,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 		
 		const code = editor?.document.getText(editor.selection);
+
 		if(!code) {
 			vscode.window.showErrorMessage("No Code Selected!");
 			return;
@@ -125,7 +137,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		switch(lang) {
 			case "Python":
 				const structuredCode = await handlePythonParsing(context, code);
-				break;
 			default: 
 				vscode.window.showInformationMessage("Unsupported Language");
 		}
