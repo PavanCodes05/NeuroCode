@@ -7,7 +7,6 @@ const structurePrompt = (command: string, language: string, structuredCode?: str
 
     try {
         parsedStructuredCode = structuredCode ? JSON.parse(structuredCode) : undefined;
-        console.log(parsedStructuredCode);
     } catch (error) {
         console.warn("Invalid structuredCode JSON:", error);   
     }
