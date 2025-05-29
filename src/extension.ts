@@ -126,35 +126,77 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("No Active Editor!");
 			return;
 		}
-		
-		const code = editor?.document.getText(editor.selection);
-		const startLine = editor.selection.start.line;
-		const endLine = editor.selection.end.line;
 
-		if(!code) {
+		const code = editor.document.getText(editor.selection);
+		const selection = editor.selection;
+		const startLine = selection.start.line;
+		const endLine = selection.end.line;
+
+		if (!code) {
 			vscode.window.showErrorMessage("No Code Selected!");
 			return;
 		}
 
-		switch(lang) {
+		switch (lang) {
 			case "Python":
 				const structuredCode = await handlePythonParsing(context, code);
 				const projectContext = await getContext();
-				const prompt = structurePrompt("refactor", lang, structuredCode ? structuredCode : undefined, projectContext);
-
+				const prompt = structurePrompt("refactor", lang, structuredCode || undefined, projectContext);
 				const response = await callLLM(prompt);
-				if(!response) {
+		
+				if (!response?.modifiedCode || response.modifiedCode.trim() === code.trim()) {
+					vscode.window.showInformationMessage("No changes detected.");
 					return;
 				}
 
-				applyChangesToEditor(editor, "replace", startLine, endLine + 1, response.modifiedCode);
-				break;
-			default: 
-				vscode.window.showInformationMessage("Unsupported Language");
-		}
+				await editor.edit(editBuilder => {
+					editBuilder.replace(selection, response.modifiedCode);
+				});
 
-		vscode.window.showInformationMessage("Refactor Code Snippet");
+				const decorationType = vscode.window.createTextEditorDecorationType({
+					backgroundColor: 'rgba(0, 255, 0, 0.1)', 
+					isWholeLine: true,
+				});
+				const modifiedRange = new vscode.Range(startLine, 0, endLine + 1, 0);
+				editor.setDecorations(decorationType, [modifiedRange]);
+
+				const options: vscode.QuickPickItem[] = [
+					{ label: '✅ Accept', description: 'Apply the refactored code' },
+					{ label: '❌ Reject', description: 'Revert to the original code' }
+				];
+
+				const choice = 	await vscode.window.showQuickPick(options, {
+					placeHolder: 'What do you want to do with the refactored code?'
+				});
+
+				if (!choice) {
+					vscode.window.showInformationMessage('No selection made.');
+					return;
+				}
+
+				switch (choice.label) {
+					case '✅ Accept':
+						editor.setDecorations(decorationType, []);
+						vscode.window.showInformationMessage('Changes accepted!');
+						break;
+					case '❌ Reject':
+						await editor.edit(editBuilder => {
+							editBuilder.replace(
+								new vscode.Range(startLine, 0, startLine + response.modifiedCode.split("\n").length, 0),
+								code
+							);
+						});
+						editor.setDecorations(decorationType, []);
+						vscode.window.showInformationMessage('Changes reverted!');
+						break;
+				}
+				break;
+		
+			default:
+				vscode.window.showInformationMessage("Unsupported Language");
+	}
 	});
+	
 
 	// GenerateDoc Command
 	const generateDoc = vscode.commands.registerCommand('neurocode.generateDoc', async() => {
