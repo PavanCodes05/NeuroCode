@@ -58,6 +58,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	//Custom Prompt Command
 	const customPrompt = vscode.commands.registerCommand('neurocode.customPrompt', async() => {
 		const lang = identifyLanguage();
+		let structuredCode: string | undefined = "";
 
 		const editor = vscode.window.activeTextEditor;
 		if(!editor) {
@@ -89,32 +90,35 @@ export async function activate(context: vscode.ExtensionContext) {
 		  
 		switch (lang) {
 			case "Python":
-				const structuredCode = await handlePythonParsing(context, selectedCode, startline);
-				const projectContext = await getContext();
-				const prompt = structurePrompt("customPrompt", lang, structuredCode ? structuredCode : undefined, projectContext, userPrompt);
-
-				const response = await callLLM(prompt);
-				if(!response) {
-					return;
-				}
-
-				if (documentLineCount === 0) {
-					applyChangesToEditor(editor, "insert", 0, 0, response.modifiedCode);
-					return;
-				  }
-
-				if (!structuredCode) {
-					const insertLine = Math.min(startline, documentLineCount);
-					applyChangesToEditor(editor, "insert", insertLine, insertLine, response.modifiedCode);
-					return;
-				}
-
-				const safeEndLine = Math.min(endline + 1, documentLineCount);
-				applyChangesToEditor(editor, "replace", startline, safeEndLine, response.modifiedCode);
-				return;
+				structuredCode = await handlePythonParsing(context, selectedCode, startline);
+				break;
 			default:
 				vscode.window.showInformationMessage("Unsupported Language");
+				return;
 		}
+		
+		const projectContext = await getContext();
+		const prompt = structurePrompt("customPrompt", lang, structuredCode ? structuredCode : undefined, projectContext, userPrompt);
+
+		const response = await callLLM(prompt);
+		if(!response) {
+			return;
+		}
+
+		if (documentLineCount === 0) {
+			applyChangesToEditor(editor, "insert", 0, 0, response.modifiedCode);
+			return;
+		}
+
+		if (!structuredCode) {
+			const insertLine = Math.min(startline, documentLineCount);
+			applyChangesToEditor(editor, "insert", insertLine, insertLine, response.modifiedCode);
+			return;
+		}
+
+		const safeEndLine = Math.min(endline + 1, documentLineCount);
+		applyChangesToEditor(editor, "replace", startline, safeEndLine, response.modifiedCode);
+		return;
 	}); 
 
 	// Refactor Code Command
