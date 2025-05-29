@@ -171,6 +171,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
 				if (!choice) {
 					vscode.window.showInformationMessage('No selection made.');
+					await editor.edit(editBuilder => {
+						editBuilder.replace(
+							new vscode.Range(startLine, 0, startLine + response.modifiedCode.split("\n").length, 0),
+							code
+						);
+					});
+					editor.setDecorations(decorationType, []);
 					return;
 				}
 
