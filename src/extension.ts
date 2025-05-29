@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import dotenv from 'dotenv';
 import path from 'path';
 
-import { identifyLanguage, handlePythonParsing, applyChangesToEditor } from './utils/index.js';
+import { identifyLanguage, handlePythonParsing, applyChangesToEditor, applyLineDecorations, clearAllDecorations, getDiffLines } from './utils/index.js';
 import { getContext } from './context-analysis/index.js';
 import { structurePrompt, callLLM } from './llm-integration/index.js';
 import { getWebviewContent } from './views/webView.js';
@@ -118,90 +118,86 @@ export async function activate(context: vscode.ExtensionContext) {
 	}); 
 
 	// Refactor Code Command
-	const refactor = vscode.commands.registerCommand('neurocode.refactor', async() => {
+	const refactor = vscode.commands.registerCommand('neurocode.refactor', async () => {
 		const lang = identifyLanguage();
+		let structuredCode: string | undefined = "";
 
 		const editor = vscode.window.activeTextEditor;
-		if(!editor) {
+		if (!editor) {
 			vscode.window.showErrorMessage("No Active Editor!");
 			return;
 		}
+	
+		const selectedCode = editor.document.getText(editor.selection);
 
-		const code = editor.document.getText(editor.selection);
 		const selection = editor.selection;
 		const startLine = selection.start.line;
 		const endLine = selection.end.line;
-
-		if (!code) {
+	
+		if (!selectedCode) {
 			vscode.window.showErrorMessage("No Code Selected!");
 			return;
 		}
-
-		switch (lang) {
+	
+		switch(lang) {
 			case "Python":
-				const structuredCode = await handlePythonParsing(context, code);
-				const projectContext = await getContext();
-				const prompt = structurePrompt("refactor", lang, structuredCode || undefined, projectContext);
-				const response = await callLLM(prompt);
-		
-				if (!response?.modifiedCode || response.modifiedCode.trim() === code.trim()) {
-					vscode.window.showInformationMessage("No changes detected.");
-					return;
-				}
-
-				await editor.edit(editBuilder => {
-					editBuilder.replace(selection, response.modifiedCode);
-				});
-
-				const decorationType = vscode.window.createTextEditorDecorationType({
-					backgroundColor: 'rgba(0, 255, 0, 0.1)', 
-					isWholeLine: true,
-				});
-				const modifiedRange = new vscode.Range(startLine, 0, endLine + 1, 0);
-				editor.setDecorations(decorationType, [modifiedRange]);
-
-				const options: vscode.QuickPickItem[] = [
-					{ label: '✅ Accept', description: 'Apply the refactored code' },
-					{ label: '❌ Reject', description: 'Revert to the original code' }
-				];
-
-				const choice = 	await vscode.window.showQuickPick(options, {
-					placeHolder: 'What do you want to do with the refactored code?'
-				});
-
-				if (!choice) {
-					vscode.window.showInformationMessage('No selection made.');
-					await editor.edit(editBuilder => {
-						editBuilder.replace(
-							new vscode.Range(startLine, 0, startLine + response.modifiedCode.split("\n").length, 0),
-							code
-						);
-					});
-					editor.setDecorations(decorationType, []);
-					return;
-				}
-
-				switch (choice.label) {
-					case '✅ Accept':
-						editor.setDecorations(decorationType, []);
-						vscode.window.showInformationMessage('Changes accepted!');
-						break;
-					case '❌ Reject':
-						await editor.edit(editBuilder => {
-							editBuilder.replace(
-								new vscode.Range(startLine, 0, startLine + response.modifiedCode.split("\n").length, 0),
-								code
-							);
-						});
-						editor.setDecorations(decorationType, []);
-						vscode.window.showInformationMessage('Changes reverted!');
-						break;
-				}
+				structuredCode = await handlePythonParsing(context, selectedCode);
 				break;
-		
 			default:
-				vscode.window.showInformationMessage("Unsupported Language");
-	}
+				vscode.window.showErrorMessage("Unsupported Language!");
+				return;
+		}
+	
+		const projectContext = await getContext();
+		const prompt = structurePrompt("refactor", lang, structuredCode || undefined, projectContext);
+		const response = await callLLM(prompt);
+	
+		if (!response?.modifiedCode || response.modifiedCode.trim() === selectedCode.trim()) {
+			vscode.window.showInformationMessage("No changes detected.");
+			return;
+		}
+	
+		await editor.edit(editBuilder => {
+			editBuilder.replace(selection, response.modifiedCode);
+		});
+	
+		const diffLines = getDiffLines(selectedCode, response.modifiedCode, startLine);
+		applyLineDecorations(editor, diffLines);
+	
+		const options: vscode.QuickPickItem[] = [
+			{ label: '✅ Accept', description: 'Apply the refactored code' },
+			{ label: '❌ Reject', description: 'Revert to the original code' }
+		];
+	
+		const choice = await vscode.window.showQuickPick(options, {
+			placeHolder: 'What do you want to do with the refactored code?'
+		});
+	
+		const modifiedLineCount = response.modifiedCode.split('\n').length;
+		const revertRange = new vscode.Range(startLine, 0, startLine + modifiedLineCount, 0);
+
+		if (!choice) {
+			vscode.window.showInformationMessage('No selection made.');
+			await editor.edit(editBuilder => {
+				editBuilder.replace(revertRange, selectedCode);
+			});
+			clearAllDecorations(editor);
+			return;
+		}
+	
+		switch (choice.label) {
+			case '✅ Accept':
+				clearAllDecorations(editor);
+				vscode.window.showInformationMessage('Changes accepted!');
+				return;
+			case '❌ Reject':
+				await editor.edit(editBuilder => {
+					editBuilder.replace(revertRange, selectedCode);
+				});
+				clearAllDecorations(editor);
+				vscode.window.showInformationMessage('Changes reverted!');
+				return;
+		}
 	});
 	
 
