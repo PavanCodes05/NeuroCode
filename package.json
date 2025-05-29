@@ -42,6 +42,11 @@
         "command": "neurocode.customPrompt",
         "key": "ctrl+shift+x",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "neurocode.refactor",
+        "key": "ctrl+shift+r",
+        "when": "editorTextFocus"
       }
     ]
    },
