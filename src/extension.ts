@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import dotenv from 'dotenv';
 import path from 'path';
 
-import { identifyLanguage, handlePythonParsing, applyChangesToEditor, applyLineDecorations, clearAllDecorations, getDiffLines } from './utils/index.js';
+import { identifyLanguage, handlePythonParsing, applyChangesToEditor, applyLineDecorations, clearAllDecorations, getDiffLines, addLoader, cancellableMessage } from './utils/index.js';
 import { getContext } from './context-analysis/index.js';
 import { structurePrompt, callLLM } from './llm-integration/index.js';
 import { getWebviewContent } from './views/webView.js';
@@ -132,9 +132,9 @@ export async function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 	
-		const selectedCode = editor.document.getText(editor.selection);
-
 		const selection = editor.selection;
+		const selectedCode = editor.document.getText(selection);
+
 		const startLine = selection.start.line;
 		const endLine = selection.end.line;
 	
@@ -142,7 +142,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("No Code Selected!");
 			return;
 		}
-	
+		
 		switch(lang) {
 			case "Python":
 				structuredCode = await handlePythonParsing(context, selectedCode);
@@ -151,16 +151,41 @@ export async function activate(context: vscode.ExtensionContext) {
 				vscode.window.showErrorMessage("Unsupported Language!");
 				return;
 		}
-	
+				
+		const loader = addLoader("Refactoring");
+		editor.setDecorations(loader, [
+			new vscode.Range(startLine, 0, endLine + 1, 0)
+		]);
+				
 		const projectContext = await getContext();
 		const prompt = structurePrompt("refactor", lang, structuredCode || undefined, projectContext);
-		const response = await callLLM(prompt);
-	
-		if (!response?.modifiedCode || response.modifiedCode.trim() === selectedCode.trim()) {
-			vscode.window.showInformationMessage("No changes detected.");
+
+		type LLMResponse = {
+			modifiedCode: string;
+			[key: string]: any;
+		};
+
+		const llmCall = callLLM(prompt) as Promise<LLMResponse>;
+		const cancelMessage = cancellableMessage("Refactoring");
+		const timeout = new Promise<never>((_, reject) =>
+			setTimeout(() => reject(new Error("LLM Timeout")), 15000));
+
+		let response: LLMResponse;
+		
+		try {
+			response = await Promise.race([llmCall, cancelMessage, timeout]);
+		} catch (error) {
+			editor.setDecorations(loader, []);
+			vscode.window.showErrorMessage("Refactoring Cancelled/Failed!");
 			return;
 		}
-	
+		editor.setDecorations(loader, []);
+		
+		if (!response?.modifiedCode) {
+			vscode.window.showInformationMessage("No response from LLM.");
+			return;
+		}
+
 		await editor.edit(editBuilder => {
 			editBuilder.replace(selection, response.modifiedCode);
 		});
