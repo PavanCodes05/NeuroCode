@@ -56,5 +56,34 @@ function clearAllDecorations(editor: vscode.TextEditor) {
 	editor.setDecorations(modifiedDecoration, []);
 }
 
+function addLoader(message: string) {
+	const loadingDecorationType = vscode.window.createTextEditorDecorationType({
+		backgroundColor: 'rgba(128, 128, 128, 0.1)',
+		isWholeLine: true,
+		after: {
+			contentText: `⏳ ${message}... (click Cancel above to abort)`,
+			color: 'gray',
+			margin: '0 0 0 1rem',
+		},
+	});
 
-export { getDiffLines, applyLineDecorations, clearAllDecorations };
+	return loadingDecorationType;
+}
+
+function cancellableMessage(message: string) {
+	const controller = new AbortController();
+	
+	return new Promise<never>((_, reject) => {
+		vscode.window
+			.showInformationMessage(`${message} in progress...`, "Cancel")
+			.then(selection => {
+				if (selection === "Cancel") {
+					controller.abort();
+					reject(new Error("User cancelled"));
+				}
+			});
+	});
+};
+
+
+export { getDiffLines, applyLineDecorations, clearAllDecorations, addLoader, cancellableMessage };
