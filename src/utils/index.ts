@@ -6,4 +6,4 @@ import { getDiffLines, clearAllDecorations, applyLineDecorations, addLoader, can
 // Python
 import { handlePythonParsing } from './python/handlePythonParsing';
 
-export { identifyLanguage, applyChangesToEditor, handlePythonParsing, getDiffLines, clearAllDecorations, applyLineDecorations, addLoader };
+export { identifyLanguage, applyChangesToEditor, handlePythonParsing, getDiffLines, clearAllDecorations, applyLineDecorations, addLoader, cancellableMessage };
