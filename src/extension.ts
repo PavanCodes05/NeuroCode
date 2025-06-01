@@ -160,20 +160,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		const projectContext = await getContext();
 		const prompt = structurePrompt("refactor", lang, structuredCode || undefined, projectContext);
 
-		type LLMResponse = {
-			modifiedCode: string;
-			[key: string]: any;
-		};
-
-		const llmCall = callLLM(prompt) as Promise<LLMResponse>;
+		const llmCall = callLLM(prompt);
 		const cancelMessage = cancellableMessage("Refactoring");
-		const timeout = new Promise<never>((_, reject) =>
-			setTimeout(() => reject(new Error("LLM Timeout")), 15000));
 
-		let response: LLMResponse;
+		let response;
 		
 		try {
-			response = await Promise.race([llmCall, cancelMessage, timeout]);
+			response = await Promise.race([llmCall, cancelMessage]);
 		} catch (error) {
 			editor.setDecorations(loader, []);
 			vscode.window.showErrorMessage("Refactoring Cancelled/Failed!");
@@ -182,7 +175,8 @@ export async function activate(context: vscode.ExtensionContext) {
 		editor.setDecorations(loader, []);
 		
 		if (!response?.modifiedCode) {
-			vscode.window.showInformationMessage("No response from LLM.");
+			vscode.window.showInformationMessage("No Changes Detected.");
+			editor.setDecorations(loader, []);
 			return;
 		}
 
