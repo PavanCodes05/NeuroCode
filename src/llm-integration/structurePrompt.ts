@@ -10,7 +10,14 @@ const structurePrompt = (command: string, language: string, structuredCode?: str
     } catch (error) {
         console.warn("Invalid structuredCode JSON:", error);   
     }
+    
+    const now = new Date();
+    const date = now.getDate();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
 
+    const UID = `Request ID: ${date}:${hours}:${minutes}:${seconds}`;
     const systemMessage = `System: ${SystemPrompt}`;
     const userMessage = `User:\n${JSON.stringify({
         language,
@@ -19,7 +26,7 @@ const structurePrompt = (command: string, language: string, structuredCode?: str
         userPrompt
     }, null, 2)}`;
 
-    const coherePrompt = `${systemMessage}\n\n${userMessage}`;
+    const coherePrompt = `${UID}\n\n${systemMessage}\n\n${userMessage}`;
     
     return coherePrompt;
 };
