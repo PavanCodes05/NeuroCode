@@ -7,8 +7,8 @@ const runCohere = async (message: string, panel?: vscode.WebviewPanel) => {
     const CO_API_KEY = process.env.CO_API_KEY;
 
     if (!CO_API_KEY) {
-        console.error("[runCohere] Missing CO_API_KEY");
-        return;
+        const msg = "[runCohere] Missing CO_API_KEY";
+        throw new Error(msg);
     }
 
     const cohere = new CohereClient({
@@ -27,11 +27,11 @@ const runCohere = async (message: string, panel?: vscode.WebviewPanel) => {
                         const chunk = chat.text;
                         panel.webview.postMessage({ type: "stream", chunk });
                     } else {
-                        console.log("[runCohere] Ignoring event type:", chat.eventType);
+                        console.log(`[runCohere] Ignoring event type: ${chat.eventType}`);
                     }
                 };
             } catch (error) {
-                console.error("[runCohere] Error:", error);
+                throw error;
             }
     };
 
@@ -45,7 +45,9 @@ const runCohere = async (message: string, panel?: vscode.WebviewPanel) => {
             const rawresponse = chat.text;
 
             const jsonMatch = rawresponse.match(/```json\s*([\s\S]*?)\s*```/);
-            if (!jsonMatch) { return null; };
+            if (!jsonMatch) {
+                throw new Error("[runCohere] No JSON block found in LLM response");
+            }
             
             const jsonString = jsonMatch[1];
             const parsedJson = JSON.parse(jsonString);
@@ -57,7 +59,7 @@ const runCohere = async (message: string, panel?: vscode.WebviewPanel) => {
             };
 
         } catch(error) {
-            console.error("[runCohere] Error:", error);
+            throw error;
         }
     }
 
