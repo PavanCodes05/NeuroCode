@@ -6,12 +6,19 @@ import path from 'path';
 import { identifyLanguage, handlePythonParsing, applyChangesToEditor, applyLineDecorations, clearAllDecorations, getDiffLines, addLoader, cancellableMessage } from './utils/index.js';
 import { getContext } from './context-analysis/index.js';
 import { structurePrompt, callLLM } from './llm-integration/index.js';
+import { registerChatWebview } from './views/chatView.js';
 import { getWebviewContent } from './views/webView.js';
 
 dotenv.config({path: path.resolve(__dirname, '..', '.env')});
 
 export async function activate(context: vscode.ExtensionContext) {
 	console.log("NeuroCode is Activated");
+
+	vscode.commands.executeCommand('neurocode.pairProgramming');
+
+	const pairProgramming = vscode.commands.registerCommand('neurocode.pairProgramming', async() => {
+		registerChatWebview(context);
+	});
 
 	// Explain Code Command
 	const explain = vscode.commands.registerCommand('neurocode.explain', async() => {
@@ -251,6 +258,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage("Generate Doc");
 	});
 
-	context.subscriptions.push(explain, refactor, customPrompt, generateDoc);
+	context.subscriptions.push(explain, refactor, customPrompt, generateDoc, pairProgramming);
 };
 

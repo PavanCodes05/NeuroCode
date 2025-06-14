@@ -30,6 +30,10 @@
       {
         "command": "neurocode.generateDoc",
         "title": "Generate Doc"
+      },
+      {
+        "command": "neurocode.pairProgramming",
+        "title": "Pair Programming"
       }
     ],
     "keybindings": [
@@ -48,7 +52,26 @@
         "key": "ctrl+shift+r",
         "when": "editorTextFocus"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "neurocode",
+          "title": "NeuroCode",
+          "icon": "media/robot.svg"
+        }
+      ]
+    },
+    "views": {
+      "neurocode": [
+        {
+          "type": "webview",
+          "id": "neurocode.chatView",
+          "name": "Buddy",
+          "icon": "media/robot.svg"
+        }
+      ]
+    }
    },
   "scripts": {
     "vscode:prepublish": "npm run compile",
