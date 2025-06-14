@@ -17,6 +17,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('neurocode.pairProgramming');
 
 	const pairProgramming = vscode.commands.registerCommand('neurocode.pairProgramming', async() => {
+		vscode.commands.executeCommand('workbench.view.explorer');
+		vscode.commands.executeCommand('neurocode.chatView.focus'); 
 		registerChatWebview(context);
 	});
 
