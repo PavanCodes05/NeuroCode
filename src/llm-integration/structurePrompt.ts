@@ -1,33 +1,46 @@
 import { systemPrompts } from "./systemPrompt";
 
-const structurePrompt = (command: string, language: string, structuredCode?: string, context?: any, userPrompt?: string) => {
+const structurePrompt = (
+    command: string,
+    language: string,
+    structuredCode?: string,
+    context?: any,
+    userPrompt?: string
+    ) => {
     const SystemPrompt = systemPrompts(command);
 
     let parsedStructuredCode: any = undefined;
+    let rawCode: string = "";
 
     try {
         parsedStructuredCode = structuredCode ? JSON.parse(structuredCode) : undefined;
+        if (parsedStructuredCode?.code) {
+        rawCode = parsedStructuredCode.code;
+        }
     } catch (error) {
-        console.warn("Invalid structuredCode JSON:", error);   
+        console.warn("⚠️ Failed to parse structuredCode JSON:", error);
     }
-    
-    const now = new Date();
-    const date = now.getDate();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const seconds = now.getSeconds();
 
-    const UID = `Request ID: ${date}:${hours}:${minutes}:${seconds}`;
-    const systemMessage = `System: ${SystemPrompt}`;
-    const userMessage = `User:\n${JSON.stringify({
+    const now = new Date();
+    const UID = `Request ID: ${now.getDate()}:${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+
+    const codeBlock = rawCode
+        ? `\n\`\`\`${language.toLowerCase()}\n${rawCode}\n\`\`\`\n`
+        : "";
+
+    const userMessage = `User:\n${JSON.stringify(
+        {
         language,
         structuredCode: parsedStructuredCode,
         context,
-        userPrompt
-    }, null, 2)}`;
+        userPrompt,
+        },
+        null,
+        2
+    )}`;
 
-    const coherePrompt = `${UID}\n\n${systemMessage}\n\n${userMessage}`;
-    
+    const coherePrompt = `${UID}\n\nSystem:\n${SystemPrompt}\n${codeBlock}\n${userMessage}`;
+
     return coherePrompt;
 };
 

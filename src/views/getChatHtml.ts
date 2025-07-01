@@ -88,7 +88,7 @@ export function getChatHtml(webview: any, extensionUri: any, persona: string = "
 
 	<img id="pet" src="${petImageUri}" style="height: 160px; object-fit: contain;" />
 	<div class="message">
-			Current Buddy: <i>${persona.toUpperCase()}</i>
+			<strong> Current Buddy: ${persona.toUpperCase()}
 	</div>
 
 

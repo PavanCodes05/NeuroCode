@@ -1,26 +1,27 @@
 import * as vscode from 'vscode';
 import { getChatHtml } from './getChatHtml';
 
+let currentWebview: vscode.Webview | undefined;
+
 export function registerChatWebview(context: vscode.ExtensionContext) {
 	console.log("🐾 Chat view is resolving...");
 	const storedPersona = context.globalState.get<string>('selectedPersona') || 'mentor';
 
 	const provider: vscode.WebviewViewProvider = {
 		resolveWebviewView(webviewView: vscode.WebviewView) {
-			webviewView.webview.options = {
-				enableScripts: true
-			};
-
 			console.log("🧪 Injecting webview HTML");
 
-			webviewView.webview.html = getChatHtml(webviewView.webview, context.extensionUri, storedPersona);
+			currentWebview = webviewView.webview; 
+			currentWebview.options = { enableScripts: true };
+			currentWebview.html = getChatHtml(currentWebview, context.extensionUri, storedPersona);
 
-			webviewView.webview.onDidReceiveMessage((message) => {
+			currentWebview.onDidReceiveMessage((message) => {
 				switch (message.command) {
 					case 'personaChanged':
 						context.globalState.update('selectedPersona', message.persona);
-						webviewView.webview.html = getChatHtml(webviewView.webview, context.extensionUri, message.persona);
+						currentWebview!.html = getChatHtml(currentWebview!, context.extensionUri, message.persona);
 						break;
+						
 				}
 			});
 		}
@@ -29,4 +30,12 @@ export function registerChatWebview(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider("neurocode.chatView", provider)
 	);
+}
+
+export function sendMessageToChat(payload: { text: string }) {
+	if (!currentWebview) {
+		console.warn('[ChatView] Webview is not ready.');
+		return;
+	}
+	currentWebview.postMessage(payload);
 }

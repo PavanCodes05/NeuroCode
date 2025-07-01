@@ -6,8 +6,10 @@ import path from 'path';
 import { identifyLanguage, handlePythonParsing, applyChangesToEditor, applyLineDecorations, clearAllDecorations, getDiffLines, addLoader, cancellableMessage } from './utils/index.js';
 import { getContext } from './context-analysis/index.js';
 import { structurePrompt, callLLM } from './llm-integration/index.js';
-import { registerChatWebview } from './views/chatView.js';
+import { registerChatWebview, sendMessageToChat } from './views/chatView.js';
 import { getWebviewContent } from './views/webView.js';
+import { trigger } from './pairProgramming/index.js';
+import { getPersonaFeedback } from './llm-integration/cohere.js';
 
 dotenv.config({path: path.resolve(__dirname, '..', '.env')});
 
@@ -20,6 +22,55 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand('workbench.view.explorer');
 		vscode.commands.executeCommand('neurocode.chatView.focus'); 
 		registerChatWebview(context);
+
+		const lang = identifyLanguage();
+
+		let validCode: string | undefined = "";
+		let structuredCode: string | undefined = "";
+
+		let typingTimeout: NodeJS.Timeout | null = null;
+
+		context.subscriptions.push(
+		vscode.workspace.onDidChangeTextDocument((event) => {
+			const editor = vscode.window.activeTextEditor;
+			if (!editor || event.document !== editor.document) {return;}
+
+			if (typingTimeout) {clearTimeout(typingTimeout);}
+
+			typingTimeout = setTimeout(async() => {
+			const extractedCodeBlock = await trigger(editor);
+			validCode = extractedCodeBlock?.code;
+
+			switch (lang) {
+				case "Python":
+					structuredCode = await handlePythonParsing(context, validCode!);
+					break;
+				default:
+					vscode.window.showInformationMessage("Unsupported Language");
+					return;
+			}
+	
+			const storedPersona = context.globalState.get<string>('selectedPersona') || 'mentor';
+			const projectContext = await getContext();
+			const prompt = structurePrompt(
+				storedPersona,
+				lang,
+				JSON.stringify({ code: validCode, ...JSON.parse(structuredCode!) }),
+				projectContext
+			  );
+			  
+			try {
+				const response = await getPersonaFeedback(prompt);
+				sendMessageToChat({ text: response.message }); 
+			} catch (err) {
+				console.error("🤖 Failed to get persona feedback:", err);
+				sendMessageToChat({ text: "Something went wrong parsing the response. Try again." });
+			}		
+			}, 5000);
+		})
+		);
+
+
 	});
 
 	// Explain Code Command
@@ -61,7 +112,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		const projectContext = await getContext();
 		const prompt = structurePrompt("explain", lang, structuredCode, projectContext);
 		const response = await callLLM(prompt, panel);
-
 	});
 
 	//Custom Prompt Command
