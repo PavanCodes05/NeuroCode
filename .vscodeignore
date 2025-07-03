@@ -1,11 +1,66 @@
-.vscode/**
-.vscode-test/**
-src/**
+# IDE related
+.vscode/
+*.code-workspace
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Tests
+__tests__/
+test/
+*.spec.js
+*.test.js
+coverage/
+
+# Source maps
+*.map
+
+# Local environment files
+.env*
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Git
+.git/
 .gitignore
-.yarnrc
-vsc-extension-quickstart.md
-**/tsconfig.json
-**/eslint.config.mjs
-**/*.map
-**/*.ts
-**/.vscode-test.*
+
+# Node dependencies
+node_modules/
+.pnpm-store/
+dist/
+build/
+.cache/
+.next/        # For Next.js
+.vercel/      # For Vercel project-specific files
+
+# Docker
+docker-compose.yml
+Dockerfile
+
+# VS Code extension packaging (if using .vscodeignore)
+*.ts
+tsconfig.json
+
+# Others (custom as per your project)
+*.md
+README.md
+*.sh
+*.sqlite
+*.sqlite3
+*.csv
+*.bak
+*.zip
+*.tar.gz
+uploads/
+scripts/
+*.py

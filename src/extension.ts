@@ -49,7 +49,7 @@ export async function activate(context: vscode.ExtensionContext) {
 							structuredCode = await handlePythonParsing(context, validCode!);
 							break;
 						default:
-							vscode.window.showInformationMessage("Unsupported Language");
+							vscode.window.showInformationMessage("Supported Languages (.py)");
 							return;
 					}
 
@@ -105,7 +105,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				structuredCode = await handlePythonParsing(context, selectedCode, startline);
 				break;
 			default:
-				vscode.window.showInformationMessage("Unsupported Language");
+				vscode.window.showInformationMessage("Supported Languages (.py)");
 				return;
 		}
 				
@@ -153,7 +153,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				structuredCode = await handlePythonParsing(context, selectedCode, startline);
 				break;
 			default:
-				vscode.window.showInformationMessage("Unsupported Language");
+				vscode.window.showInformationMessage("Supported Languages (.py)");
 				return;
 		}
 	
@@ -259,7 +259,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				structuredCode = await handlePythonParsing(context, selectedCode);
 				break;
 			default:
-				vscode.window.showErrorMessage("Unsupported Language!");
+				vscode.window.showErrorMessage("Supported Languages (.py)!");
 				return;
 		}
 				
@@ -356,7 +356,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				const structuredCode = await handlePythonParsing(context, code);
 				break;
 			default:
-				vscode.window.showInformationMessage("Unsupported Language");
+				vscode.window.showInformationMessage("Supported Languages (.py)");
 		}
 
 		vscode.window.showInformationMessage("Generate Doc");

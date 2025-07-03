@@ -1,11 +1,17 @@
 {
   "name": "neurocode",
   "displayName": "NeuroCode",
-  "description": "",
+  "description": "NeuroCode is an advanced AI-powered pair programming extension for Visual Studio Code that revolutionizes how developers write, understand, and refactor code. Unlike traditional AI coding assistants, NeuroCode features intelligent personas that adapt to your coding style and provide contextually aware assistance through sophisticated code analysis and real-time monitoring.",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.99.0"
   },
+  "publisher": "PavanCodes05",
+  "icon": "media/neuroCodeLogo.png",
+  "repository": {
+  "type": "git",
+  "url": "https://github.com/PavanCodes05/NeuroCode"
+},
   "categories": [
     "Other"
   ],
