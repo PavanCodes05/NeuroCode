@@ -18,59 +18,59 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	vscode.commands.executeCommand('neurocode.pairProgramming');
 
-	const pairProgramming = vscode.commands.registerCommand('neurocode.pairProgramming', async() => {
+	let isPairProgrammingActive = false;
+
+	const pairProgramming = vscode.commands.registerCommand('neurocode.pairProgramming', async () => {
+		if (isPairProgrammingActive) {return;} 
+		isPairProgrammingActive = true;
+
 		vscode.commands.executeCommand('workbench.view.explorer');
-		vscode.commands.executeCommand('neurocode.chatView.focus'); 
+		vscode.commands.executeCommand('neurocode.chatView.focus');
 		registerChatWebview(context);
 
 		const lang = identifyLanguage();
-
 		let validCode: string | undefined = "";
 		let structuredCode: string | undefined = "";
-
 		let typingTimeout: NodeJS.Timeout | null = null;
 
 		context.subscriptions.push(
-		vscode.workspace.onDidChangeTextDocument((event) => {
-			const editor = vscode.window.activeTextEditor;
-			if (!editor || event.document !== editor.document) {return;}
+			vscode.workspace.onDidChangeTextDocument((event) => {
+				const editor = vscode.window.activeTextEditor;
+				if (!editor || event.document !== editor.document) {return;}
 
-			if (typingTimeout) {clearTimeout(typingTimeout);}
+				if (typingTimeout) {clearTimeout(typingTimeout);}
 
-			typingTimeout = setTimeout(async() => {
-			const extractedCodeBlock = await trigger(editor);
-			validCode = extractedCodeBlock?.code;
+				typingTimeout = setTimeout(async () => {
+					const extractedCodeBlock = await trigger(editor);
+					validCode = extractedCodeBlock?.code;
 
-			switch (lang) {
-				case "Python":
-					structuredCode = await handlePythonParsing(context, validCode!);
-					break;
-				default:
-					vscode.window.showInformationMessage("Unsupported Language");
-					return;
-			}
-	
-			const storedPersona = context.globalState.get<string>('selectedPersona') || 'mentor';
-			const projectContext = await getContext();
-			const prompt = structurePrompt(
-				storedPersona,
-				lang,
-				JSON.stringify({ code: validCode, ...JSON.parse(structuredCode!) }),
-				projectContext
-			  );
-			  
-			try {
-				const response = await getPersonaFeedback(prompt);
-				sendMessageToChat({ text: response.message }); 
-			} catch (err) {
-				console.error("🤖 Failed to get persona feedback:", err);
-				sendMessageToChat({ text: "Something went wrong parsing the response. Try again." });
-			}		
-			}, 5000);
-		})
+					switch (lang) {
+						case "Python":
+							structuredCode = await handlePythonParsing(context, validCode!);
+							break;
+						default:
+							vscode.window.showInformationMessage("Unsupported Language");
+							return;
+					}
+
+					const storedPersona = context.globalState.get<string>('selectedPersona') || 'mentor';
+					const projectContext = await getContext();
+					const prompt = structurePrompt(
+						storedPersona,
+						lang,
+						JSON.stringify({ code: validCode, ...JSON.parse(structuredCode!) }),
+						projectContext
+					);
+
+					try {
+						const response = await getPersonaFeedback(prompt);
+						sendMessageToChat({ text: response.message });
+					} catch (err) {
+						console.error("🤖 Failed to get persona feedback:", err);
+					}
+				}, 5000);
+			})
 		);
-
-
 	});
 
 	// Explain Code Command
@@ -115,38 +115,39 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 
 	//Custom Prompt Command
-	const customPrompt = vscode.commands.registerCommand('neurocode.customPrompt', async() => {
+	const customPrompt = vscode.commands.registerCommand('neurocode.customPrompt', async () => {
 		const lang = identifyLanguage();
 		let structuredCode: string | undefined = "";
-
+	
 		const editor = vscode.window.activeTextEditor;
-		if(!editor) {
+		if (!editor) {
 			vscode.window.showErrorMessage("No Active Editor!");
 			return;
 		}
-
+	
 		const document = editor.document;
 		const documentLineCount = document.lineCount;
-		  
+	
 		let startline = editor.selection.start.line;
 		let endline = editor.selection.end.line;
-		
-		const selectedCode = editor?.document.getText(editor.selection);
+	
+		const selectedCode = editor.document.getText(editor.selection);
+		const originalCode = selectedCode || ''; // Store for revert
 		if (!selectedCode || selectedCode.trim() === "") {
 			startline = endline = editor.selection.active.line;
 		}
-		
+	
 		const userPrompt = await vscode.window.showInputBox({
 			prompt: "Give Custom Prompts - NeuroCode",
-			placeHolder: "Eg: Write a function that generates fibonacci series till n",	
+			placeHolder: "Eg: Write a function that generates fibonacci series till n",
 			ignoreFocusOut: true
 		});
-
-		if(!userPrompt) {
+	
+		if (!userPrompt) {
 			vscode.window.showWarningMessage("No Input Given By User!");
 			return;
 		}
-		  
+	
 		switch (lang) {
 			case "Python":
 				structuredCode = await handlePythonParsing(context, selectedCode, startline);
@@ -155,30 +156,81 @@ export async function activate(context: vscode.ExtensionContext) {
 				vscode.window.showInformationMessage("Unsupported Language");
 				return;
 		}
-		
+	
+		const loader = addLoader("Thinking...");
+		editor.setDecorations(loader, [
+			new vscode.Range(startline, 0, endline + 1, 0)
+		]);
+	
 		const projectContext = await getContext();
 		const prompt = structurePrompt("customPrompt", lang, structuredCode ? structuredCode : undefined, projectContext, userPrompt);
-
-		const response = await callLLM(prompt);
-		if(!response) {
+	
+		const llmCall = callLLM(prompt);
+		const cancelMessage = cancellableMessage("Custom Prompt");
+	
+		let response;
+	
+		try {
+			response = await Promise.race([llmCall, cancelMessage]);
+		} catch (err) {
+			editor.setDecorations(loader, []);
+			vscode.window.showInformationMessage("Operation Cancelled.");
 			return;
 		}
-
+	
+		editor.setDecorations(loader, []);
+		if (!response?.modifiedCode) {
+			vscode.window.showInformationMessage("No Changes Detected.");
+			return;
+		}
+	
+		const modifiedCode = response.modifiedCode;
+	
+		// Case 1: Empty file → insert code
 		if (documentLineCount === 0) {
-			applyChangesToEditor(editor, "insert", 0, 0, response.modifiedCode);
+			applyChangesToEditor(editor, "insert", 0, 0, modifiedCode);
 			return;
 		}
-
+	
+		// Case 2: Inline insert (no selection)
 		if (!structuredCode) {
 			const insertLine = Math.min(startline, documentLineCount);
-			applyChangesToEditor(editor, "insert", insertLine, insertLine, response.modifiedCode);
+			applyChangesToEditor(editor, "insert", insertLine, insertLine, modifiedCode);
 			return;
 		}
-
+	
+		// Case 3: Selected code → replace + revert support
 		const safeEndLine = Math.min(endline + 1, documentLineCount);
-		applyChangesToEditor(editor, "replace", startline, safeEndLine, response.modifiedCode);
-		return;
-	}); 
+		applyChangesToEditor(editor, "replace", startline, safeEndLine, modifiedCode);
+	
+		const diffLines = getDiffLines(originalCode, modifiedCode, startline);
+		applyLineDecorations(editor, diffLines);
+	
+		const options: vscode.QuickPickItem[] = [
+			{ label: '✅ Accept', description: 'Apply the new code' },
+			{ label: '❌ Reject', description: 'Revert to original code' }
+		];
+	
+		const choice = await vscode.window.showQuickPick(options, {
+			placeHolder: 'Do you want to keep the changes?'
+		});
+	
+		const originalLineCount = originalCode.split('\n').length;
+		const revertRange = new vscode.Range(startline, 0, startline + originalLineCount, 0);
+	
+		if (!choice || choice.label === '❌ Reject') {
+			await editor.edit(editBuilder => {
+				editBuilder.replace(revertRange, originalCode);
+			});
+			clearAllDecorations(editor);
+			vscode.window.showInformationMessage('Changes reverted!');
+			return;
+		}
+	
+		clearAllDecorations(editor);
+		vscode.window.showInformationMessage('Changes accepted!');
+	});
+	
 
 	// Refactor Code Command
 	const refactor = vscode.commands.registerCommand('neurocode.refactor', async () => {
