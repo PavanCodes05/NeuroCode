@@ -1,17 +1,13 @@
 import * as vscode from 'vscode';
 
-import dotenv from 'dotenv';
-import path from 'path';
+import { identifyLanguage, handlePythonParsing, applyChangesToEditor, applyLineDecorations, clearAllDecorations, getDiffLines, addLoader, cancellableMessage } from './utils/index';
+import { getContext } from './context-analysis/index';
+import { structurePrompt, callLLM } from './llm-integration/index';
+import { registerChatWebview, sendMessageToChat } from './views/chatView';
+import { getWebviewContent } from './views/webView';
+import { trigger } from './pairProgramming/index';
+import { getPersonaFeedback } from './llm-integration/cohere';
 
-import { identifyLanguage, handlePythonParsing, applyChangesToEditor, applyLineDecorations, clearAllDecorations, getDiffLines, addLoader, cancellableMessage } from './utils/index.js';
-import { getContext } from './context-analysis/index.js';
-import { structurePrompt, callLLM } from './llm-integration/index.js';
-import { registerChatWebview, sendMessageToChat } from './views/chatView.js';
-import { getWebviewContent } from './views/webView.js';
-import { trigger } from './pairProgramming/index.js';
-import { getPersonaFeedback } from './llm-integration/cohere.js';
-
-dotenv.config({path: path.resolve(__dirname, '..', '.env')});
 
 export async function activate(context: vscode.ExtensionContext) {
 	console.log("NeuroCode is Activated");

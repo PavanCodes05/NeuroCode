@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { identifyLanguage } from '../../utils/index.js';
-import { extractCodeBlock } from '../index.js';
-import { getIndentation, isContinuation, startsPythonBlock } from './extractionHelpers.js';
+import { identifyLanguage } from '../../utils/index';
+import { extractCodeBlock } from '../index';
+import { getIndentation, isContinuation, startsPythonBlock } from './extractionHelpers';
 
 interface ExtractedCode {
     code: string;
