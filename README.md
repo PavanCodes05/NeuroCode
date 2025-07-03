@@ -11,6 +11,9 @@
 
 NeuroCode is an advanced AI-powered pair programming extension for Visual Studio Code that revolutionizes how developers write, understand, and refactor code. Unlike traditional AI coding assistants, NeuroCode features **intelligent personas** that adapt to your coding style and provide contextually aware assistance through sophisticated code analysis and real-time monitoring.
 
+## AI PERSONAS REAL-TIME SUGGESTIONS
+![AI Persona](https://github.com/user-attachments/assets/cffe2a44-3419-429f-8cbf-409d1ba684cd)
+
 
 ### 🌟 Key Differentiators
 
