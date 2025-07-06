@@ -16,7 +16,8 @@ const runCohere = async (message: string, panel?: vscode.WebviewPanel) => {
         try {
             const stream = await cohere.chatStream({
                 model: "command-a-03-2025",
-                message: message,
+                message,
+                chatHistory: []
             });
 
             for await (const chat of stream) {
@@ -35,7 +36,8 @@ const runCohere = async (message: string, panel?: vscode.WebviewPanel) => {
         try {
             const chat = await cohere.chat({
                 model: "command-a-03-2025",
-                message: message
+                message,
+                chatHistory: []
             });
 
             const rawresponse = chat.text;
@@ -85,8 +87,9 @@ const getPersonaFeedback = async (message: string) => {
     try {
         const chat = await cohere.chat({
             model: "command-a-03-2025",
-            message
-        });
+            message,
+            chatHistory: []
+    });
 
         const rawresponse = chat.text;
         console.log("[getPersonaFeedback] Raw LLM response:\n", rawresponse);
