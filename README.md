@@ -1,4 +1,5 @@
 # NeuroCode 🧠💻
+### TAKEN DOWN FROM VSCODE DUE TO DEV REQS. 
 
 [![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-blue.svg)](https://marketplace.visualstudio.com/items?itemName=neurocode)
 [![Version](https://img.shields.io/badge/version-0.0.1-green.svg)](https://github.com/PavanCodes05/NeuroCode)
